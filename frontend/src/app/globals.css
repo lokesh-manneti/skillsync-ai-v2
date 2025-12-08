@@ -2,24 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* FORCE LIGHT MODE DEFAULTS */
+/* Reset default styles to ensure text is visible */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 255, 255, 255;
+  color-scheme: light; /* Forces browser to render standard scrollbars/inputs */
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background-color: #f9fafb; /* Light Gray background */
+  color: #111827;            /* Dark Gray text */
 }
 
-/* Ensure inputs always have dark text */
+/* Force Input Fields to have dark text and white background */
 input, select, textarea {
-  color: #111827; /* gray-900 */
+  color: #111827 !important;
+  background-color: #ffffff !important;
+  border-color: #d1d5db;
 }
