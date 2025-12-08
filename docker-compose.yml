@@ -1,0 +1,75 @@
+services:
+  # -----------------------------
+  # DATABASE (PostgreSQL + pgvector)
+  # -----------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: skillsync_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-skillsync}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - skillsync_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------
+  # BACKEND (FastAPI)
+  # -----------------------------
+  backend:
+    build: ./backend
+    container_name: skillsync_backend
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+      # NEW: Mount the key into the container
+      - ./backend/gcp-credentials.json:/app/gcp-credentials.json
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-skillsync}
+      - SECRET_KEY=changethis_to_something_secure_later
+      # NEW: Tell Google Auth library where to look
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
+      # NEW: Define your Project ID (Replace with your actual Project ID from Google Cloud console)
+      - GOOGLE_CLOUD_PROJECT=skillsync-ai-479611 
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - skillsync_network
+
+  # -----------------------------
+  # FRONTEND (Next.js)
+  # -----------------------------
+  frontend:
+    build: ./frontend
+    container_name: skillsync_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Important: prevents overwriting container node_modules
+    environment:
+      # This points to localhost because the browser (Client) makes the request
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - skillsync_network
+
+volumes:
+  postgres_data:
+
+networks:
+  skillsync_network:
+    driver: bridge

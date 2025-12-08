@@ -1,0 +1,166 @@
+import copy 
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from app.db.session import get_db
+from app.models.user import User
+from app.models.profile import Profile
+from app.schemas.profile import ProfileResponse
+from app.services import resume_service
+from app.api.v1.endpoints.auth import get_current_user
+from app.services import ai_service # <--- You had this, good.
+from app.schemas.profile import RoadmapItemUpdate , ResumeOptimizationResponse
+from fastapi.encoders import jsonable_encoder
+
+
+
+router = APIRouter()
+
+@router.post("/upload", response_model=ProfileResponse)
+async def upload_resume(
+    target_role: str = Form(...),
+    experience_level: str = Form(...),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Validate File Type
+    if file.content_type != "application/pdf":
+        raise HTTPException(400, detail="Only PDF files are supported")
+
+    # 2. Parse PDF
+    text_content = await resume_service.parse_pdf(file)
+    
+    if len(text_content) < 50:
+        raise HTTPException(400, detail="Resume content is too short or unreadable.")
+
+    # ---------------------------------------------------------
+    # NEW: Call Gemini AI (This was missing!)
+    # ---------------------------------------------------------
+    try:
+        ai_result = await ai_service.generate_career_analysis(
+            resume_text=text_content,
+            target_role=target_role,
+            experience_level=experience_level
+        )
+    except Exception as e:
+        print(f"CRITICAL AI ERROR: {e}")
+        # Fallback if AI fails, so we still save the resume
+        ai_result = {"error": "AI analysis failed", "details": str(e)}
+    # ---------------------------------------------------------
+
+    # 3. Check if profile exists (Update) or Create New
+    result = await db.execute(select(Profile).filter(Profile.user_id == current_user.id))
+    existing_profile = result.scalars().first()
+
+    if existing_profile:
+        existing_profile.target_role = target_role
+        existing_profile.experience_level = experience_level
+        existing_profile.resume_text_content = text_content
+        existing_profile.ai_analysis_json = ai_result # <--- Update AI Result
+        db.add(existing_profile)
+        await db.commit()
+        await db.refresh(existing_profile)
+        return existing_profile
+    else:
+        new_profile = Profile(
+            user_id=current_user.id,
+            target_role=target_role,
+            experience_level=experience_level,
+            resume_text_content=text_content,
+            ai_analysis_json=ai_result # <--- Save AI Result
+        )
+        db.add(new_profile)
+        await db.commit()
+        await db.refresh(new_profile)
+        return new_profile
+
+@router.get("/me", response_model=ProfileResponse)
+async def get_my_profile(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(select(Profile).filter(Profile.user_id == current_user.id))
+    profile = result.scalars().first()
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+        
+    return profile
+
+@router.patch("/roadmap/toggle")
+async def toggle_roadmap_item(
+    update_data: RoadmapItemUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Fetch Profile
+    result = await db.execute(select(Profile).filter(Profile.user_id == current_user.id))
+    profile = result.scalars().first()
+    
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+
+    # 2. CRITICAL FIX: Create a Deep Copy
+    # This forces a completely new object in memory, ensuring SQLAlchemy treats it as a "new value"
+    ai_data = copy.deepcopy(profile.ai_analysis_json)
+    
+    try:
+        # 3. Modify the specific item
+        # We access the list by index safely
+        target_phase = ai_data['roadmap'][update_data.phase_index]
+        target_item = target_phase['action_items'][update_data.item_index]
+        
+        # Toggle the status
+        target_item['completed'] = update_data.completed
+        
+        # 4. Explicit Re-assignment
+        # We assign the deep copied object back to the model
+        profile.ai_analysis_json = ai_data
+        
+        # 5. Mark as modified (Double safety)
+        # This tells SQLAlchemy: "I definitely changed this field, please save it."
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(profile, "ai_analysis_json")
+        
+        db.add(profile)
+        await db.commit()
+        
+        return {"status": "success", "updated_roadmap": ai_data['roadmap']}
+        
+    except (IndexError, KeyError, TypeError) as e:
+        print(f"Update Error: {e}")
+        raise HTTPException(400, detail=f"Invalid roadmap index or structure: {str(e)}")
+
+
+@router.post("/optimize_resume", response_model=ResumeOptimizationResponse)
+async def optimize_resume(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. Fetch Profile
+    result = await db.execute(select(Profile).filter(Profile.user_id == current_user.id))
+    profile = result.scalars().first()
+    
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+
+    # 2. Extract Completed Tasks from the JSON Roadmap
+    completed_tasks = []
+    roadmap = profile.ai_analysis_json.get("roadmap", [])
+    
+    for phase in roadmap:
+        for item in phase.get("action_items", []):
+            # Check if the item object has completed=True
+            if isinstance(item, dict) and item.get("completed") is True:
+                completed_tasks.append(item.get("task"))
+
+    # 3. Call AI Service
+    optimized_text = await ai_service.generate_optimized_resume(
+        original_text=profile.resume_text_content,
+        target_role=profile.target_role,
+        completed_tasks=completed_tasks
+    )
+    
+    return {"optimized_content": optimized_text}
