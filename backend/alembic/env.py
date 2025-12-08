@@ -27,8 +27,8 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # 4. Overwrite the sqlalchemy.url with our Env Variable from settings
-config.set_main_option("sqlalchemy.url", settings.SQLALCHEMY_DATABASE_URI)
-
+escaped_url = settings.SQLALCHEMY_DATABASE_URI.replace("%", "%%")
+config.set_main_option("sqlalchemy.url", escaped_url)
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")

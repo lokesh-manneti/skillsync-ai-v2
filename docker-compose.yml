@@ -30,16 +30,17 @@ services:
     command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./backend:/app
-      # NEW: Mount the key into the container
       - ./backend/gcp-credentials.json:/app/gcp-credentials.json
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-skillsync}
+      # --- REVERT TO LOCAL SETTINGS ---
+      # This points to the local 'db' container defined at the top of the file
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/skillsync
+      
+      # Keep these as they are (or use a dummy secret for local)
       - SECRET_KEY=changethis_to_something_secure_later
-      # NEW: Tell Google Auth library where to look
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
-      # NEW: Define your Project ID (Replace with your actual Project ID from Google Cloud console)
       - GOOGLE_CLOUD_PROJECT=skillsync-ai-479611 
     depends_on:
       db:
