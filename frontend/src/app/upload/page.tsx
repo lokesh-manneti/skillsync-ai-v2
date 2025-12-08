@@ -79,7 +79,7 @@ export default function UploadPage() {
               placeholder="e.g. Senior React Developer"
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 text-gray-900 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
 
@@ -89,7 +89,7 @@ export default function UploadPage() {
             <select
               value={experienceLevel}
               onChange={(e) => setExperienceLevel(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-1 block w-full rounded-md border border-gray-300 text-gray-900 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
               <option value="Fresher">Fresher (0-1 Years)</option>
               <option value="Junior">Junior (1-3 Years)</option>
