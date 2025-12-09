@@ -2,14 +2,17 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# Create the Async Engine
+# FIX: Disable prepared statements for Supabase Transaction Pooler compatibility
 engine = create_async_engine(
     settings.SQLALCHEMY_DATABASE_URI,
     future=True,
-    echo=True, # Set to False in production (True logs all SQL queries to terminal)
+    echo=True,
+    connect_args={
+        "statement_cache_size": 0, # <--- This disables prepared statements
+        "prepared_statement_cache_size": 0,
+    }
 )
 
-# Create the Session Factory
 AsyncSessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
@@ -17,7 +20,6 @@ AsyncSessionLocal = sessionmaker(
     autoflush=False,
 )
 
-# Dependency for API Routes
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
