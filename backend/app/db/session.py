@@ -2,14 +2,14 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-# FIX: Disable prepared statements for Supabase Transaction Pooler compatibility
 engine = create_async_engine(
     settings.SQLALCHEMY_DATABASE_URI,
     future=True,
     echo=True,
     connect_args={
-        "statement_cache_size": 0, # <--- This disables prepared statements
+        "statement_cache_size": 0,
         "prepared_statement_cache_size": 0,
+        "ssl": "require",  # <--- FORCE SSL CONNECTION
     }
 )
 
