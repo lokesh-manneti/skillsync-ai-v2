@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { User, RefreshCw, LogOut, Mail, Briefcase } from 'lucide-react';
+import { User, RefreshCw, LogOut, Briefcase } from 'lucide-react'; // Removed Mail icon import
 import Link from 'next/link';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -43,19 +43,26 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
+            {/* HIDDEN FOR V2 LAUNCH: 
+               Backend update needed to fetch User Name/Email correctly.
+               Restoring in V2.1
+            */}
+            
+            {/* <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Full Name</label>
               <div className="mt-1 p-3 bg-slate-50 rounded-lg text-slate-900 font-medium">
-                {profile.full_name}
+                User
               </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Email Address</label>
               <div className="mt-1 p-3 bg-slate-50 rounded-lg text-slate-900 font-medium flex items-center gap-2">
                 <Mail size={16} className="text-slate-400" />
-                {profile.email}
+                email@example.com
               </div>
-            </div>
+            </div> 
+            */}
+
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Current Target Role</label>
               <div className="mt-1 p-3 bg-slate-50 rounded-lg text-slate-900 font-medium flex items-center gap-2">
@@ -75,15 +82,16 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
+            {/* Mobile Responsive Layout */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="max-w-md">
                 <h4 className="font-medium text-slate-900">Re-analyze Resume</h4>
                 <p className="text-sm text-slate-500 mt-1">
-                  Want to switch career paths? Uploading a new resume will regenerate your entire roadmap and chat history.
+                  Want to switch career paths? Uploading a new resume will regenerate your entire roadmap.
                 </p>
               </div>
-              <Link href="/upload">
-                <Button variant="secondary" className="border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800">
+              <Link href="/upload" className="w-full md:w-auto">
+                <Button variant="secondary" className="w-full md:w-auto border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800">
                   Upload New Resume
                 </Button>
               </Link>
@@ -91,7 +99,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end pb-8">
           <Button variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => logout()}>
             <LogOut size={16} className="mr-2" />
             Sign Out
