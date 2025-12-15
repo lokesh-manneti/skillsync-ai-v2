@@ -1,19 +1,28 @@
 'use client';
 
 import { Sidebar } from "@/components/layout/Sidebar";
-import { MobileNav } from "@/components/layout/MobileNav"; // <--- Import this
-import { useEffect } from "react";
+import { MobileNav } from "@/components/layout/MobileNav";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
+  
+  // 1. Add a mounted state to track if we are on the client
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true); // 2. Set to true only after the first render
     if (!isAuthenticated) router.push('/login');
   }, [isAuthenticated, router]);
 
+  // 3. Prevent rendering until the client has mounted
+  // This ensures Server output (null) === Initial Client output (null)
+  if (!isMounted) return null;
+
+  // 4. Now it's safe to check authentication
   if (!isAuthenticated) return null;
 
   return (
