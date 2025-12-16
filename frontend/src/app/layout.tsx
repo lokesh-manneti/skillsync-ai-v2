@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
 
 // 1. Setup Fonts
-const inter = Inter({ 
-  subsets: ["latin"], 
+const inter = Inter({
+  subsets: ["latin"],
   variable: '--font-inter',
   display: 'swap'
 });
@@ -37,6 +38,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <body className="font-sans antialiased bg-slate-50 text-slate-900 selection:bg-brand-100 selection:text-brand-900">
         {children}
+        <Toaster />
       </body>
     </html>
   );

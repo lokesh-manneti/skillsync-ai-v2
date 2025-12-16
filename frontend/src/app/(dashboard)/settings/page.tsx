@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { User, RefreshCw, LogOut, Briefcase } from 'lucide-react'; // Removed Mail icon import
+import { User, RefreshCw, LogOut, Briefcase, Mail } from 'lucide-react'; // Removed Mail icon import
 import Link from 'next/link';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -48,20 +48,20 @@ export default function SettingsPage() {
                Restoring in V2.1
             */}
             
-            {/* <div>
+            <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Full Name</label>
               <div className="mt-1 p-3 bg-slate-50 rounded-lg text-slate-900 font-medium">
-                User
+                {profile.full_name}
               </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Email Address</label>
               <div className="mt-1 p-3 bg-slate-50 rounded-lg text-slate-900 font-medium flex items-center gap-2">
                 <Mail size={16} className="text-slate-400" />
-                email@example.com
+                {profile.email}
               </div>
             </div> 
-            */}
+           
 
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Current Target Role</label>

@@ -6,18 +6,40 @@ import { Button } from '@/components/ui/Button';
 import { ResumePreview } from '@/components/features/resume/ResumePreview';
 import { Loader2, Sparkles, FileText, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+// 1. Import useToast
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ResumePage() {
   const [resumeContent, setResumeContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // 2. Initialize toast
+  const { toast } = useToast();
 
   const generateResume = async () => {
     setIsLoading(true);
     try {
       const res = await api.post('/profile/optimize_resume');
       setResumeContent(res.data.optimized_content);
-    } catch (error) {
-      console.error("Failed to generate resume");
+    } catch (error: any) {
+      console.error("Failed to generate resume", error);
+
+      // --- NEW: Handle Rate Limit Error (429) ---
+      if (error.response && error.response.status === 429) {
+        toast({
+          title: "Daily Limit Reached 🛑",
+          description: error.response.data.detail, // "Daily optimization limit reached..."
+          variant: "destructive",
+        });
+      } else {
+        // Handle generic errors
+        toast({
+          title: "Generation Failed",
+          description: "Something went wrong generating your resume. Please try again.",
+          variant: "destructive",
+        });
+      }
+      // ------------------------------------------
+
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +83,7 @@ export default function ResumePage() {
             <ul className="space-y-3">
               {[
                 "Open in Overleaf to export as PDF",
-                "First time? You'll need to create a free Overleaf account", // <--- ADDED
+                "First time? You'll need to create a free Overleaf account",
                 "Review the 'Skills' section for new additions",
                 "Ensure your target role is up to date"
               ].map((tip, i) => (

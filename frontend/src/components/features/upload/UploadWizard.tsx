@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+// 1. Ensure this import exists
+import { useToast } from "@/components/ui/use-toast"; 
 
 const steps = [
   { id: 1, title: 'Target Role', icon: Briefcase },
@@ -18,6 +20,9 @@ const steps = [
 
 export function UploadWizard() {
   const router = useRouter();
+  // 2. Initialize the toast hook
+  const { toast } = useToast(); 
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({ role: '', level: 'Fresher' });
   const [file, setFile] = useState<File | null>(null);
@@ -60,10 +65,28 @@ export function UploadWizard() {
       });
       // Add a small artificial delay so user sees the success animation
       setTimeout(() => router.push('/dashboard'), 2000);
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error(error);
       setIsSubmitting(false);
-      setCurrentStep(2); // Go back on error
+      setCurrentStep(2); // Go back to upload step on error
+
+      // --- NEW: Handle Rate Limit Error (429) ---
+      if (error.response && error.response.status === 429) {
+        toast({
+          title: "Daily Limit Reached 🛑",
+          description: error.response.data.detail, // e.g., "Daily upload limit reached (2/day)..."
+          variant: "destructive",
+        });
+      } else {
+        // Generic Error
+        toast({
+          title: "Upload Failed",
+          description: error.response?.data?.detail || "Something went wrong analyzing your resume. Please try again.",
+          variant: "destructive",
+        });
+      }
+      // ------------------------------------------
     }
   };
 
