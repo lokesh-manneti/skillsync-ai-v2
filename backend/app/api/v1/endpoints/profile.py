@@ -2,6 +2,7 @@ import copy
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
 from app.models.user import User
@@ -81,13 +82,25 @@ async def get_my_profile(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(select(Profile).filter(Profile.user_id == current_user.id))
+    # NEW: Use selectinload to eagerly load the 'user' relationship
+    result = await db.execute(
+        select(Profile)
+        .options(selectinload(Profile.user)) # Join User table
+        .filter(Profile.user_id == current_user.id)
+    )
     profile = result.scalars().first()
     
     if not profile:
+        # Optional: Return basic user info even if profile doesn't exist yet
+        # But for now, 404 is fine as the frontend handles it
         raise HTTPException(status_code=404, detail="Profile not found")
+    
+    # Manually map the User fields to the flat Response schema
+    response_data = jsonable_encoder(profile)
+    response_data["full_name"] = profile.user.full_name if profile.user else "Unknown"
+    response_data["email"] = profile.user.email if profile.user else "Unknown"
         
-    return profile
+    return response_data
 
 @router.patch("/roadmap/toggle")
 async def toggle_roadmap_item(

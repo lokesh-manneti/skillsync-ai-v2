@@ -11,8 +11,13 @@ class ProfileResponse(ProfileBase):
     id: str
     user_id: str
     resume_text_content: str
-    ai_analysis_json: Any | None = None # <--- Add this field
+    ai_analysis_json: Any | None = None 
     updated_at: datetime | None
+
+    # --- NEW FIELDS FOR SETTINGS PAGE ---
+    full_name: str | None = None
+    email: str | None = None
+    # ------------------------------------
 
     class Config:
         from_attributes = True
@@ -25,3 +30,4 @@ class RoadmapItemUpdate(BaseModel):
 
 class ResumeOptimizationResponse(BaseModel):
     optimized_content: str
+    
