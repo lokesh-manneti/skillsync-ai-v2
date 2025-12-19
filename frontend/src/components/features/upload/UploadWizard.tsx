@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Briefcase, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Upload, Briefcase, CheckCircle2, ArrowRight, ArrowLeft, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
-// 1. Ensure this import exists
 import { useToast } from "@/components/ui/use-toast"; 
 
 const steps = [
@@ -20,9 +19,11 @@ const steps = [
 
 export function UploadWizard() {
   const router = useRouter();
-  // 2. Initialize the toast hook
   const { toast } = useToast(); 
   
+  // 1. Create a reference for the hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({ role: '', level: 'Fresher' });
   const [file, setFile] = useState<File | null>(null);
@@ -38,12 +39,48 @@ export function UploadWizard() {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
+  // Trigger the hidden input when the box is clicked
+  const handleBoxClick = () => {
+    if (!file) {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        if (e.target.files[0].type === 'application/pdf') {
+            setFile(e.target.files[0]);
+        } else {
+            toast({
+                title: "Invalid File Type",
+                description: "Please upload a PDF file.",
+                variant: "destructive",
+            });
+        }
+    }
+  };
+
+  const handleRemoveFile = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Stop click from bubbling to the container
+    setFile(null);
+    // Reset input value so the same file can be selected again if needed
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       if (e.dataTransfer.files[0].type === 'application/pdf') {
         setFile(e.dataTransfer.files[0]);
+      } else {
+        toast({
+            title: "Invalid File Type",
+            description: "Please upload a PDF file.",
+            variant: "destructive",
+        });
       }
     }
   };
@@ -52,7 +89,7 @@ export function UploadWizard() {
     if (!file || !formData.role) return;
     
     setIsSubmitting(true);
-    setCurrentStep(3); // Move to analysis step
+    setCurrentStep(3); 
 
     const data = new FormData();
     data.append('target_role', formData.role);
@@ -63,30 +100,26 @@ export function UploadWizard() {
       await api.post('/profile/upload', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      // Add a small artificial delay so user sees the success animation
       setTimeout(() => router.push('/dashboard'), 2000);
       
     } catch (error: any) {
       console.error(error);
       setIsSubmitting(false);
-      setCurrentStep(2); // Go back to upload step on error
+      setCurrentStep(2); 
 
-      // --- NEW: Handle Rate Limit Error (429) ---
       if (error.response && error.response.status === 429) {
         toast({
           title: "Daily Limit Reached 🛑",
-          description: error.response.data.detail, // e.g., "Daily upload limit reached (2/day)..."
+          description: error.response.data.detail,
           variant: "destructive",
         });
       } else {
-        // Generic Error
         toast({
           title: "Upload Failed",
           description: error.response?.data?.detail || "Something went wrong analyzing your resume. Please try again.",
           variant: "destructive",
         });
       }
-      // ------------------------------------------
     }
   };
 
@@ -186,48 +219,56 @@ export function UploadWizard() {
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Upload Resume</h2>
               <p className="text-slate-500 mb-8">PDF format only, max 5MB.</p>
 
+              {/* Dropzone Container */}
               <div
+                onClick={handleBoxClick}
                 onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
                 onDragLeave={() => setIsDragActive(false)}
                 onDrop={handleFileDrop}
                 className={cn(
-                  "flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 transition-all duration-300 cursor-pointer",
+                  "flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 transition-all duration-300 relative", // Added relative
                   isDragActive ? "border-brand-500 bg-brand-50 scale-[1.02]" : "border-slate-200 hover:border-slate-300",
-                  file ? "border-green-500 bg-green-50/30" : ""
+                  file ? "border-green-500 bg-green-50/30 cursor-default" : "cursor-pointer hover:bg-slate-50" // cursor logic
                 )}
               >
+                {/* Hidden Input using Ref */}
+                <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    className="hidden" 
+                    accept="application/pdf"
+                    onChange={handleFileChange}
+                />
+
                 {file ? (
                   <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="text-center">
-                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                       <CheckCircle2 size={32} />
                     </div>
                     <p className="text-sm font-medium text-slate-900">{file.name}</p>
+                    <p className="text-xs text-slate-500 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    
                     <button 
-                      onClick={(e) => { e.stopPropagation(); setFile(null); }} 
-                      className="text-xs text-red-500 hover:underline mt-2"
+                      onClick={handleRemoveFile} 
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-4 text-xs font-medium text-red-600 bg-red-50 rounded-full hover:bg-red-100 transition-colors"
                     >
-                      Remove file
+                      <Trash2 size={12} />
+                      Remove File
                     </button>
                   </motion.div>
                 ) : (
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-brand-50 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="text-center pointer-events-none"> {/* Prevent text selection blocking click */}
+                    <div className="w-16 h-16 bg-brand-50 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                       <Upload size={32} />
                     </div>
                     <p className="text-sm font-medium text-slate-900">Drag & drop your PDF here</p>
                     <p className="text-xs text-slate-400 mt-2">or click to browse</p>
-                    <input 
-                      type="file" 
-                      className="absolute inset-0 opacity-0 cursor-pointer" 
-                      accept="application/pdf"
-                      onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])}
-                    />
                   </div>
                 )}
               </div>
 
               <div className="mt-8 flex justify-between">
-                <Button variant="ghost" onClick={handleBack}>
+                <Button variant="ghost" type="button" onClick={handleBack}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> Back
                 </Button>
                 <Button onClick={handleSubmit} disabled={!file} isLoading={isSubmitting}>
