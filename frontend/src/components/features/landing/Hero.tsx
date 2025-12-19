@@ -26,7 +26,7 @@ export function Hero() {
             >
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50/50 px-3 py-1 text-sm font-medium text-brand-700 backdrop-blur-sm mb-6">
                 <span className="flex h-2 w-2 rounded-full bg-brand-600"></span>
-                v2.0 is live: Now with Gemini 2.5 Flash
+                v2.0 is live: Better, faster, and more accurate.
               </div>
               
               <h1 className="font-heading text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl md:text-6xl mb-6">
