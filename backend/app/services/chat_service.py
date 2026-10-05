@@ -5,7 +5,7 @@ from app.core.config import settings
 
 # Same model as before
 llm = ChatVertexAI(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-3.6-flash",
     temperature=0.7, # Higher temperature for more natural conversation
     max_output_tokens=1024,
     location="us-central1"
