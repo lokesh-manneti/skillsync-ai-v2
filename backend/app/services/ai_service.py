@@ -8,7 +8,7 @@ from langchain_core.messages import SystemMessage, HumanMessage # <--- Add this
 
 # UPDATED: Using user-specified model name
 llm = ChatVertexAI(
-    model_name="gemini-2.5-flash", 
+    model_name="gemini-3.6-flash", 
     temperature=0.2,
     max_output_tokens=8192,
     location="us-central1" # Ensure this matches the region where the model is deployed
